@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>immangRDH AI Shop — PayPal AI Hackathon prototype v1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.1/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.1/styles/ag-theme-quartz.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #fdf4ec; color: #222; }
+  header { background: #5e1224; color: #fff; padding: 20px 16px; }
+  header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+  header p { margin: 0; opacity: .9; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; width: 100%; }
+  section { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  h2 { margin-top: 0; }
+  .notice { border: 2px solid #b8860b; background: #fff8e1; padding: 12px; border-radius: 8px; }
+  label { font-weight: 600; display: block; margin-bottom: 6px; }
+  input[type="text"] { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #ccc; border-radius: 8px; }
+  button { background: #5e1224; color: #fff; border: 0; padding: 12px 18px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+  button.secondary { background: #eee; color: #222; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px 0; }
+  .card h3 { margin: 0 0 4px; }
+  .card p { margin: 4px 0; }
+  .price { font-weight: 700; color: #5e1224; }
+  #productGrid { height: 420px; width: 100%; }
+  #checkoutStatus { margin-top: 12px; padding: 12px; border-radius: 8px; background: #f2f2f2; }
+  #paypal-button-container { margin-top: 12px; min-height: 48px; }
+  a { color: #5e1224; }
+  footer { text-align: center; padding: 16px; font-size: .9rem; color: #555; }
+  @media (max-width: 600px) { header h1 { font-size: 1.25rem; } #productGrid { height: 360px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>immangRDH AI Shop</h1>
+  <p>Describe what you need in plain words. The shop recommends a real product from immangRDH, then you check out with PayPal (sandbox).</p>
+</header>
+<main>
+  <section class="notice">
+    <strong>Prototype v1 — please read before testing.</strong>
+    <ul>
+      <li>The recommender below is <strong>rule-based</strong> (keyword matching). It is <strong>not</strong> a large language model in v1.</li>
+      <li>PayPal is in <strong>sandbox mode with a real sandbox client-id</strong>. No real money moves — sandbox test accounts only — see the checkout section.</li>
+      <li>All products are ARIFIN / immangRDH digital products. Prices were verified from his own catalog/listing files (see README.md); no price was invented. The Shift Worker Focus Planner link goes to the Gumroad store front because its product slug was not verified in those files.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1. Tell us what you need</h2>
+    <label for="needInput">What do you need help with?</label>
+    <input id="needInput" type="text" placeholder="Example: I work night shifts and want to track my irregular income">
+    <button id="recommendBtn">Recommend products</button>
+    <div id="recommendations" aria-live="polite"></div>
+  </section>
+
+  <section>
+    <h2>2. Product catalog (AG Grid)</h2>
+    <p>Click a row to select a product for checkout. The grid below is powered by AG Grid.</p>
+    <div id="productGrid" class="ag-theme-quartz"></div>
+    <p id="selectedProduct">Selected product: none yet.</p>
+  </section>
+
+  <section>
+    <h2>3. Checkout with PayPal (sandbox)</h2>
+    <div id="paypal-button-container"></div>
+    <button id="retryPaypalBtn" class="secondary">Reload PayPal button</button>
+    <div id="checkoutStatus">Checkout status: waiting for a product selection.</div>
+    <button id="flowBtn" class="secondary">Show sandbox checkout steps</button>
+    <div id="flowSteps" hidden>
+      <ol>
+        <li>Buyer clicks the PayPal button (sandbox).</li>
+        <li>The app creates a PayPal order for the selected product and amount.</li>
+        <li>The buyer approves the order in the PayPal sandbox window.</li>
+        <li>The app captures the order and shows the order result.</li>
+      </ol>
+      <p><strong>Current state: sandbox client-id installed.</strong> The PayPal JavaScript SDK is loaded in sandbox mode with ARIFIN's real sandbox client-id. Test with a PayPal sandbox buyer account only — no real money moves.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>About this prototype</h2>
+    <p>Built for the PayPal AI Hackathon (solo entry, beginner). Target prize paths: <strong>Best Demo Delivery</strong> and <strong>Best Use of AG Grid</strong>. Full details, limits and next steps are in <code>README.md</code>.</p>
+  </section>
+</main>
+<footer>immangRDH · Prototype v1 · No real payments · Sandbox only</footer>
+
+<script src="recommender.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.1/dist/ag-grid-community.min.js"></script>
+<script>
+  var PRODUCTS = window.ImmangRecommender.PRODUCTS;
+  var selected = null;
+  var gridApi = null;
+
+  function renderRecommendations(text) {
+    var result = window.ImmangRecommender.recommend(text, 3);
+    var box = document.getElementById('recommendations');
+    var html = result.matched
+      ? '<p><strong>Recommended for you:</strong></p>'
+      : '<p><strong>No strong keyword match found</strong> — here are popular starters instead. Try words like “shift”, “money”, “photo” or “kids” for a closer match:</p>';
+    result.products.forEach(function (p) {
+      html += '<div class="card"><h3>' + p.name + '</h3>'
+        + '<p class="price">' + p.priceLabel + ' · ' + p.category + '</p>'
+        + '<p>' + window.ImmangRecommender.reasonFor(p, text) + '</p>'
+        + '<p><a href="' + p.url + '" target="_blank" rel="noopener">View on Gumroad</a> '
+        + '<button class="secondary" data-select="' + p.id + '">Select for checkout</button></p></div>';
+    });
+    box.innerHTML = html;
+    box.querySelectorAll('[data-select]').forEach(function (btn) {
+      btn.addEventListener('click', function () { selectProduct(btn.getAttribute('data-select')); });
+    });
+  }
+
+  function selectProduct(id) {
+    selected = PRODUCTS.filter(function (p) { return p.id === id; })[0] || null;
+    var label = selected
+      ? 'Selected product: ' + selected.name + ' — ' + selected.priceLabel
+      : 'Selected product: none yet.';
+    document.getElementById('selectedProduct').textContent = label;
+    document.getElementById('checkoutStatus').textContent = selected
+      ? 'Checkout status: ' + selected.name + ' selected. Ready for PayPal sandbox checkout below (test account only, no real money).'
+      : 'Checkout status: waiting for a product selection.';
+  }
+
+  document.getElementById('recommendBtn').addEventListener('click', function () {
+    renderRecommendations(document.getElementById('needInput').value);
+  });
+  document.getElementById('needInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') renderRecommendations(e.target.value);
+  });
+  document.getElementById('flowBtn').addEventListener('click', function () {
+    var el = document.getElementById('flowSteps');
+    el.hidden = !el.hidden;
+  });
+
+  // AG Grid table
+  var columnDefs = [
+    { field: 'name', headerName: 'Product', flex: 2, minWidth: 160 },
+    { field: 'category', headerName: 'Category', flex: 1, minWidth: 120 },
+    { field: 'priceLabel', headerName: 'Price', flex: 1, minWidth: 90 },
+    { field: 'url', headerName: 'Gumroad link', flex: 2, minWidth: 180,
+      cellRenderer: function (params) {
+        var a = document.createElement('a');
+        a.href = params.value; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open';
+        return a;
+      } }
+  ];
+  var gridOptions = {
+    columnDefs: columnDefs,
+    rowData: PRODUCTS,
+    rowSelection: 'single',
+    onRowClicked: function (event) { selectProduct(event.data.id); }
+  };
+  if (window.agGrid) {
+    gridApi = window.agGrid.createGrid(document.getElementById('productGrid'), gridOptions);
+  } else {
+    document.getElementById('productGrid').textContent = 'Product table could not load (AG Grid CDN unavailable offline). The full catalog is still available in recommender.js.';
+  }
+</script>
+<!-- PayPal JS SDK, SANDBOX mode with ARIFIN's real sandbox client-id.
+     Test only with a PayPal sandbox buyer account. No real money moves. -->
+<script src="https://www.paypal.com/sdk/js?client-id=AUV6B5EdLIrQQMaLwwJxaZ_H5DWBeswOtgYVL9qYXVm8r-zhWEOaYAHzeYApNJxxrM9mxST5IWAp2E8s&currency=USD"></script>
+<script>
+  function renderPayPal() {
+    var container = document.getElementById('paypal-button-container');
+    var status = document.getElementById('checkoutStatus');
+    container.innerHTML = '';
+    if (window.paypal && window.paypal.Buttons) {
+      try {
+        window.paypal.Buttons({
+          createOrder: function (data, actions) {
+            if (!selected) {
+              status.textContent = 'Checkout status: select a product first (click a row or a recommendation), then click the PayPal button.';
+              return Promise.reject(new Error('No product selected'));
+            }
+            var amount = (selected.priceLabel || '').replace(/[^0-9.]/g, '');
+            status.textContent = 'Checkout status: creating sandbox order for ' + selected.name + ' (' + selected.priceLabel + ')...';
+            return actions.order.create({
+              purchase_units: [{ description: selected.name, amount: { currency_code: 'USD', value: amount } }]
+            });
+          },
+          onApprove: function (data, actions) {
+            status.textContent = 'Checkout status: sandbox payment approved, capturing...';
+            return actions.order.capture().then(function (details) {
+              status.textContent = 'Checkout status: SANDBOX payment captured. Order ID: ' + details.id + '. No real money moved.';
+            });
+          },
+          onCancel: function () {
+            status.textContent = 'Checkout status: cancelled by buyer (sandbox flow). No payment made.';
+          },
+          onError: function (err) {
+            status.textContent = 'Checkout status: PayPal sandbox error — ' + (err && err.message ? err.message : 'see console') + '. Try again with a sandbox buyer account.';
+          }
+        }).render(container);
+      } catch (e) {
+        container.textContent = 'PayPal sandbox button unavailable: ' + e.message + '. No payment made.';
+      }
+    } else {
+      container.textContent = 'PayPal sandbox button unavailable: the PayPal SDK did not load. Check the sandbox client-id and your connection, then tap Reload PayPal button. No payment made.';
+    }
+  }
+  renderPayPal();
+  document.getElementById('retryPaypalBtn').addEventListener('click', function () {
+    var status = document.getElementById('checkoutStatus');
+    if (window.paypal && window.paypal.Buttons) {
+      renderPayPal();
+    } else {
+      status.textContent = 'Checkout status: reloading PayPal SDK...';
+      var s = document.createElement('script');
+      s.src = 'https://www.paypal.com/sdk/js?client-id=AUV6B5EdLIrQQMaLwwJxaZ_H5DWBeswOtgYVL9qYXVm8r-zhWEOaYAHzeYApNJxxrM9mxST5IWAp2E8s&currency=USD';
+      s.onload = renderPayPal;
+      s.onerror = function () { status.textContent = 'Checkout status: PayPal SDK still did not load. Check your connection and try again in Chrome.'; };
+      document.body.appendChild(s);
+    }
+  });
+</script>
+</body>
+</html>

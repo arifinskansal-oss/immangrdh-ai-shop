@@ -1,6 +1,10 @@
 # immangRDH AI Shop — PayPal AI Hackathon prototype v1
 
-**Status: prototype v1, published to GitHub Pages for testing. NOT submitted to Devpost yet, NO real payment made, sandbox only.**
+**Status: prototype v1, published to GitHub Pages, demo video published on YouTube. NOT submitted to Devpost yet, NO real payment made, sandbox only.**
+
+- Public repository: https://github.com/arifinskansal-oss/immangrdh-ai-shop
+- Live demo (GitHub Pages): https://arifinskansal-oss.github.io/immangrdh-ai-shop/
+- Demo video (public YouTube, 1 minute 11 seconds): https://www.youtube.com/shorts/yZG8F_19gU8
 
 A single-page web shop (English, as the hackathon submission is in English).
 A visitor describes a need in plain words, gets 1–3 recommended products
@@ -57,23 +61,20 @@ cannot run.
 
 ## What is placeholder / does NOT work yet
 
-- **PayPal checkout button renders, but the sandbox popup stays blank
-  (28 Oct 2026, verified on phone and in the agent browser).** The
-  JavaScript SDK is now loaded in sandbox mode with ARIFIN's real
-  sandbox client-id (installed 28 Oct, verified by PayPal's SDK
-  endpoint returning 200; the client-id itself lives only in
-  `index.html`, not in this README). The yellow PayPal button renders,
-  a product can be selected, and a PayPal popup window opens, but it
-  stays on about:blank with a loading spinner and never reaches the
-  sandbox login/approval page — on a local file, on a Muse-hosted https
-  page, and in the agent browser. The sandbox site itself loads fine
-  directly (sandbox.paypal.com login works with a sandbox test buyer
-  account, balance US$5,000 test money), so the remaining fault is in
-  the popup/order flow from the hosted page, not in the client-id,
-  the test account, or the sandbox network. GitHub Pages is the next
-  test host, because the Muse-hosted page also showed a blocked
-  PayPal iframe message. No payment has been captured yet, on purpose
-  — the demo video must wait for a working capture, not fake one.
+- **PayPal sandbox checkout VERIFIED end-to-end on GitHub Pages
+  (28 Oct 2026, 01:52 WITA, phone test by ARIFIN).** The JavaScript SDK
+  is loaded in sandbox mode with ARIFIN's real sandbox client-id
+  (installed 28 Oct, verified by PayPal's SDK endpoint returning 200;
+  the client-id itself lives only in `index.html`, not in this README).
+  Earlier hosts failed: a local file and a Muse-hosted https page both
+  left the PayPal popup on about:blank (plus a blocked PayPal iframe
+  message on the Muse page). On GitHub Pages
+  (https://arifinskansal-oss.github.io/immangrdh-ai-shop/) the approval
+  page loaded, a $14 sandbox order was approved with the sandbox test
+  buyer account, and the shop page reported: "SANDBOX payment captured.
+  Order ID: 5KA01509VC994951F. No real money moved." No real money
+  moved — sandbox test money only. The demo video can now be recorded
+  from this working flow.
 - **No real PayPal credentials are used or stored anywhere in this
   folder.** None were available, and none were requested.
 - **No LLM.** Upgrading the recommender to a real AI API needs an API
